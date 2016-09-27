@@ -348,7 +348,7 @@ class Segment(BasePathMixin):
     '''
 
     def __init__(self, uri, base_uri, program_date_time=None, duration=None,
-                 title=None, byterange=None, cue_out=False, discontinuity=False, key=None,
+                 title=None, byterange=None, cue_start=False, cue_out=False, cue_end=False, discontinuity=False, key=None,
                  scte35=None, scte35_duration=None):
         self.uri = uri
         self.duration = duration
@@ -357,7 +357,9 @@ class Segment(BasePathMixin):
         self.byterange = byterange
         self.program_date_time = program_date_time
         self.discontinuity = discontinuity
+        self.cue_start = cue_start
         self.cue_out = cue_out
+        self.cue_end = cue_end
         self.scte35 = scte35
         self.scte35_duration = scte35_duration
         self.key = Key(base_uri=base_uri,**key) if key else None

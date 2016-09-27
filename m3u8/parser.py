@@ -75,10 +75,20 @@ def parse(content, strict=False):
         elif line.startswith(protocol.ext_x_discontinuity):
             state['discontinuity'] = True
 
-        elif line.startswith(protocol.ext_x_cue_out):
-            _parse_cueout(line, state)
-            state['cue_out'] = True
-            state['cue_start'] = True
+        elif line.startswith(protocol.ext_x_scte35):
+            state['current_cue_out_scte35'] = line.split(':', 1)[1]
+
+        elif line.startswith(protocol.ext_x_cue_start):
+            if line.startswith(protocol.ext_x_cue_out):
+                _parse_cueout(line, state)
+                state['cue_out'] = True
+            else:
+                state['cue_start'] = True
+                state['cue_out'] = True
+                state['current_cue_out_duration'] = line.split(':', 1)[1]
+
+        elif line.startswith(protocol.ext_x_cue_end):
+            state['cue_end'] = True
 
         elif line.startswith(protocol.ext_x_version):
             _parse_simple_parameter(line, data)
@@ -167,9 +177,11 @@ def _parse_ts_chunk(line, data, state):
         state['current_program_date_time'] += datetime.timedelta(seconds=segment['duration'])
     segment['uri'] = line
     segment['cue_out'] = state.pop('cue_out', False)
+    segment['cue_start'] = state.pop('cue_start', False)
+    segment['cue_end'] = state.pop('cue_end', False)
     if state.get('current_cue_out_scte35'):
-        segment['scte35'] = state['current_cue_out_scte35']
-        segment['scte35_duration'] = state['current_cue_out_duration'] 
+        segment['scte35'] = state.pop('current_cue_out_scte35', False)
+        segment['scte35_duration'] = state.pop('current_cue_out_duration', False)
     segment['discontinuity'] = state.pop('discontinuity', False)
     if state.get('current_key'):
       segment['key'] = state['current_key']
@@ -242,10 +254,11 @@ def _parse_simple_parameter(line, data, cast_to=str):
 
 def _parse_cueout(line, state):
     param, value = line.split(':', 1)
-    res = re.match('.*Duration=(.*),SCTE35=(.*)$', value)
+    res = re.match('.*ElapsedTime=(.*),Duration=(.*),SCTE35=(.*)$', value)
     if res:
-        state['current_cue_out_duration'] = res.group(1)
-        state['current_cue_out_scte35'] = res.group(2)
+        state['current_cue_out_elapsedtime'] = res.group(1)
+        state['current_cue_out_duration'] = res.group(2)
+        state['current_cue_out_scte35'] = res.group(3)
 
 def string_to_lines(string):
     return string.strip().replace('\r\n', '\n').split('\n')
